@@ -1,0 +1,8 @@
+{
+  "name": "SmileSync - Voice Appointment Agent",
+  "description": "A real-time voice-enabled appointment booking assistant powered by Gemini 2.5 Live API.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": []
+}

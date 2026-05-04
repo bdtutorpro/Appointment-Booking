@@ -1,0 +1,43 @@
+{
+  "entities": {
+    "booking": {
+      "title": "Booking",
+      "description": "An appointment booked via LiveAgent",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "whatsapp": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "time": {
+          "type": "string"
+        },
+        "confirmationId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["confirmed", "cancelled"]
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Server timestamp"
+        }
+      },
+      "required": ["name", "whatsapp", "date", "time", "confirmationId", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "bookings": {
+      "schema": {
+        "$ref": "#/entities/booking"
+      },
+      "description": "All bookings"
+    }
+  }
+}
