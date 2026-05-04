@@ -36,9 +36,9 @@ const bookAppointmentTool: FunctionDeclaration = {
       date: { type: Type.STRING, description: 'Date of appointment (YYYY-MM-DD).' },
       time: { type: Type.STRING, description: 'Time of appointment (HH:MM).' },
       name: { type: Type.STRING, description: 'Name of the patient.' },
-      whatsapp: { type: Type.STRING, description: 'WhatsApp number of the patient.' },
+      contactNumber: { type: Type.STRING, description: 'Contact number of the patient.' },
     },
-    required: ['date', 'time', 'name', 'whatsapp'],
+    required: ['date', 'time', 'name', 'contactNumber'],
   },
 };
 
@@ -154,8 +154,9 @@ const LiveAgent: React.FC = () => {
             Wait for the user's response. If the user chooses Bengali, switch entirely to Bengali for the rest of the conversation. If they choose English, continue in English.
             Help users book appointments. 
             When they ask for availability, call the 'checkAvailability' tool.
-            BEFORE calling 'bookAppointment', you MUST ask the user for their name AND their WhatsApp number.
-            When you have all details (date, time, name, whatsapp), call the 'bookAppointment' tool.
+            BEFORE calling 'bookAppointment', you MUST ask the user for their name AND their contact number.
+            When you have all details (date, time, name, contactNumber), call the 'bookAppointment' tool.
+            After booking is confirmed, you MUST say "আমাদের একজন প্রতিনিধি শীঘ্রই আপনার সাথে যোগাযোগ করবেন".
             Keep responses concise and conversational.`,
         tools: [{ functionDeclarations: [checkAvailabilityTool, bookAppointmentTool] }]
       };
@@ -276,7 +277,7 @@ const LiveAgent: React.FC = () => {
                     try {
                       addDoc(collection(db, 'bookings'), {
                         name: newBooking.name || '',
-                        whatsapp: newBooking.whatsapp || '',
+                        contactNumber: newBooking.contactNumber || '',
                         date: newBooking.date || '',
                         time: newBooking.time || '',
                         confirmationId: newBooking.confirmationId,
@@ -289,7 +290,7 @@ const LiveAgent: React.FC = () => {
                     
                     // Trigger WhatsApp
                     const whatsappMsg = `Hi ${newBooking.name}! Your appointment at SmileSync Dental is confirmed.\n\nDate: ${newBooking.date}\nTime: ${newBooking.time}\nConfirmation ID: ${newBooking.confirmationId}`;
-                    const phone = newBooking.whatsapp?.replace(/\D/g, '');
+                    const phone = newBooking.contactNumber?.replace(/\D/g, '');
                     if (phone) {
                       setTimeout(() => {
                          window.open(`https://wa.me/${phone}?text=${encodeURIComponent(whatsappMsg)}`, '_blank');
@@ -477,7 +478,6 @@ const LiveAgent: React.FC = () => {
             </div>
             <div>
               <h3 className="text-xl font-bold text-slate-900">Appointment Confirmed</h3>
-              <p className="text-sm text-slate-500">A copy of this appointment was sent to WhatsApp.</p>
             </div>
           </div>
           
@@ -487,8 +487,8 @@ const LiveAgent: React.FC = () => {
                <span className="block text-slate-800 font-medium mt-1">{bookingStatus.name}</span>
              </div>
              <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-               <span className="block text-xs font-semibold text-slate-400 uppercase">WhatsApp</span>
-               <span className="block text-slate-800 font-medium mt-1">{bookingStatus.whatsapp}</span>
+               <span className="block text-xs font-semibold text-slate-400 uppercase">Contact Number</span>
+               <span className="block text-slate-800 font-medium mt-1">{bookingStatus.contactNumber}</span>
              </div>
              <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
                <span className="block text-xs font-semibold text-slate-400 uppercase">Date</span>
@@ -503,7 +503,7 @@ const LiveAgent: React.FC = () => {
           <div className="mt-6 flex justify-between items-center text-sm">
              <span className="text-slate-500">Confirmation ID: <strong className="text-slate-800">{bookingStatus.confirmationId}</strong></span>
              <a 
-               href={`https://wa.me/${bookingStatus.whatsapp?.replace(/\D/g, '') || ''}?text=${encodeURIComponent(`Hi ${bookingStatus.name}! Your appointment at SmileSync Dental is confirmed.\n\nDate: ${bookingStatus.date}\nTime: ${bookingStatus.time}\nConfirmation ID: ${bookingStatus.confirmationId}`)}`}
+               href={`https://wa.me/${bookingStatus.contactNumber?.replace(/\D/g, '') || ''}?text=${encodeURIComponent(`Hi ${bookingStatus.name}! Your appointment at SmileSync Dental is confirmed.\n\nDate: ${bookingStatus.date}\nTime: ${bookingStatus.time}\nConfirmation ID: ${bookingStatus.confirmationId}`)}`}
                target="_blank"
                rel="noopener noreferrer"
                className="px-3 py-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors rounded-full font-medium flex items-center gap-1 cursor-pointer"
