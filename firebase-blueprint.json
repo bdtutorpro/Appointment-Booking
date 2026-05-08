@@ -8,8 +8,11 @@
         "name": {
           "type": "string"
         },
-        "whatsapp": {
+        "contactNumber": {
           "type": "string"
+        },
+        "serialNumber": {
+          "type": "number"
         },
         "date": {
           "type": "string"
@@ -29,7 +32,7 @@
           "description": "Server timestamp"
         }
       },
-      "required": ["name", "whatsapp", "date", "time", "confirmationId", "status", "createdAt"]
+      "required": ["name", "contactNumber", "date", "time", "confirmationId", "status", "createdAt", "serialNumber"]
     }
   },
   "firestore": {

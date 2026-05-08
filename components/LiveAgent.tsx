@@ -8,8 +8,9 @@ import {
 } from '@google/genai';
 import { createBlob, decode, decodeAudioData } from '../utils/audioUtils';
 import Visualizer from './Visualizer';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
+import { jsPDF } from 'jspdf';
 
 // Tool Definition
 const checkAvailabilityTool: FunctionDeclaration = {
@@ -52,6 +53,79 @@ const LiveAgent: React.FC = () => {
   const [chatLog, setChatLog] = useState<ChatMessage[]>([]);
   const [bookingStatus, setBookingStatus] = useState<any>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const downloadPDF = (booking: any) => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(13, 148, 136); // Teal 600
+    doc.text('RR IT Live Appointment', 105, 20, { align: 'center' });
+    
+    doc.setFontSize(16);
+    doc.setTextColor(30, 41, 59); // Slate 800
+    doc.text('Appointment Confirmation', 105, 35, { align: 'center' });
+    
+    // Divider
+    doc.setDrawColor(226, 232, 240); // Slate 200
+    doc.line(20, 45, 190, 45);
+    
+    // Details
+    doc.setFontSize(12);
+    doc.setTextColor(100, 116, 139); // Slate 500
+    
+    let y = 60;
+    doc.text('Serial Number:', 20, y);
+    doc.setTextColor(13, 148, 136);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Serial-${booking.serialNumber}`, 70, y);
+    
+    y += 10;
+    doc.setTextColor(100, 116, 139);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Patient Name:', 20, y);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`${booking.name}`, 70, y);
+    
+    y += 10;
+    doc.setTextColor(100, 116, 139);
+    doc.text('Contact Number:', 20, y);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`${booking.contactNumber}`, 70, y);
+    
+    y += 10;
+    doc.setTextColor(100, 116, 139);
+    doc.text('Date:', 20, y);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`${booking.date}`, 70, y);
+    
+    y += 10;
+    doc.setTextColor(100, 116, 139);
+    doc.text('Time:', 20, y);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`${booking.time}`, 70, y);
+    
+    y += 20;
+    doc.setFontSize(14);
+    doc.setTextColor(30, 41, 59);
+    doc.text('Confirmation ID:', 20, y);
+    doc.setTextColor(13, 148, 136);
+    doc.text(`${booking.confirmationId}`, 70, y);
+    
+    // Footer
+    doc.setFontSize(10);
+    doc.setTextColor(148, 163, 184); // Slate 400
+    doc.text('Thank you for choosing RR IT Live Appointment.', 105, 280, { align: 'center' });
+    doc.text('One of our representative will contact with you soon.', 105, 285, { align: 'center' });
+    
+    doc.save(`Appointment_${booking.confirmationId}.pdf`);
+  };
+
+  useEffect(() => {
+    if (bookingStatus) {
+      downloadPDF(bookingStatus);
+    }
+  }, [bookingStatus]);
   
   // References for Audio Contexts and Stream Management
   const inputAudioContextRef = useRef<AudioContext | null>(null);
@@ -150,13 +224,17 @@ const LiveAgent: React.FC = () => {
         },
         systemInstruction: `You are a friendly and efficient multilingual receptionist for "SmileSync Dental". 
             Today is ${new Date().toLocaleDateString()}.
+            Doctor's Schedule: Everyday 4:00 PM to 9:00 PM. 
+            EXCLUSION: Friday is CLOSED.
+            CAPACITY: Maximum 30 patients per day.
             CRITICAL INSTRUCTION: Immediately upon starting the conversation, introduce yourself and ask first: "Which language do you prefer, Bengali or English?".
             Wait for the user's response. If the user chooses Bengali, switch entirely to Bengali for the rest of the conversation. If they choose English, continue in English.
             Help users book appointments. 
             When they ask for availability, call the 'checkAvailability' tool.
             BEFORE calling 'bookAppointment', you MUST ask the user for their name AND their contact number.
             When you have all details (date, time, name, contactNumber), call the 'bookAppointment' tool.
-            After booking is confirmed, you MUST say "আমাদের একজন প্রতিনিধি শীঘ্রই আপনার সাথে যোগাযোগ করবেন".
+            The serial number is assigned automatically based on booking order.
+            After booking is confirmed, you MUST say "আমাদের একজন প্রতিনিধি শীঘ্রই আপনার সাথে যোগাযোগ করবেন" (one of our representative will contact you soon in Bengali) and mention their Serial Number.
             Keep responses concise and conversational.`,
         tools: [{ functionDeclarations: [checkAvailabilityTool, bookAppointmentTool] }]
       };
@@ -263,38 +341,72 @@ const LiveAgent: React.FC = () => {
                 let result = {};
                 
                 if (fc.name === 'checkAvailability') {
-                    // Mock availability
-                    result = { availableSlots: ['10:00 AM', '02:30 PM', '04:00 PM'] };
-                    setTranscription(`(Checking availability for ${JSON.stringify(fc.args)}...)`);
-                } else if (fc.name === 'bookAppointment') {
-                    // Mock booking
-                    const newBooking = { ...fc.args, status: 'confirmed', confirmationId: 'SMILE-' + Math.floor(Math.random() * 10000) };
-                    result = newBooking;
-                    setBookingStatus(newBooking);
-                    setTranscription(`(Booking appointment for ${fc.args['name']}...)`);
+                    const date = fc.args['date'] as string;
+                    const dateObj = new Date(date);
+                    const isFriday = dateObj.getDay() === 5; // Friday is 5 in JS (Sun=0, Sat=6)
                     
-                    // Save to Firestore
-                    try {
-                      addDoc(collection(db, 'bookings'), {
-                        name: newBooking.name || '',
-                        contactNumber: newBooking.contactNumber || '',
-                        date: newBooking.date || '',
-                        time: newBooking.time || '',
-                        confirmationId: newBooking.confirmationId,
-                        status: newBooking.status,
-                        createdAt: serverTimestamp()
-                      });
-                    } catch (e) {
-                      console.error('Error saving to Firestore:', e);
+                    if (isFriday) {
+                        result = { available: false, message: 'Friday is closed.' };
+                    } else {
+                        try {
+                            const q = query(collection(db, 'bookings'), where('date', '==', date));
+                            const snapshot = await getDocs(q);
+                            const count = snapshot.size;
+                            if (count >= 30) {
+                                result = { available: false, message: 'Appointments for this day are full (30/30).' };
+                            } else {
+                                result = { available: true, message: `Available. Current bookings: ${count}/30. Serial will be ${count + 1}.`, schedule: '4:00 PM to 9:00 PM' };
+                            }
+                        } catch (e) {
+                            console.error("Error checking availability:", e);
+                            result = { available: true, message: 'Available from 4:00 PM to 9:00 PM.' };
+                        }
                     }
+                    setTranscription(`(Checking availability for ${date}...)`);
+                } else if (fc.name === 'bookAppointment') {
+                    const date = fc.args['date'] as string;
+                    const time = fc.args['time'] as string;
+                    const name = fc.args['name'] as string;
+                    const contactNumber = fc.args['contactNumber'] as string;
+
+                    const dateObj = new Date(date);
+                    const isFriday = dateObj.getDay() === 5;
                     
-                    // Trigger WhatsApp
-                    const whatsappMsg = `Hi ${newBooking.name}! Your appointment at SmileSync Dental is confirmed.\n\nDate: ${newBooking.date}\nTime: ${newBooking.time}\nConfirmation ID: ${newBooking.confirmationId}`;
-                    const phone = newBooking.contactNumber?.replace(/\D/g, '');
-                    if (phone) {
-                      setTimeout(() => {
-                         window.open(`https://wa.me/${phone}?text=${encodeURIComponent(whatsappMsg)}`, '_blank');
-                      }, 1000);
+                    if (isFriday) {
+                        result = { error: 'Friday is closed. Please choose another date.' };
+                    } else {
+                        try {
+                            const q = query(collection(db, 'bookings'), where('date', '==', date));
+                            const snapshot = await getDocs(q);
+                            const count = snapshot.size;
+                            
+                            if (count >= 30) {
+                                result = { error: 'Maximum capacity (30) reached for this day.' };
+                            } else {
+                                const serialNumber = count + 1;
+                                const newBooking = { 
+                                    date, 
+                                    time, 
+                                    name, 
+                                    contactNumber, 
+                                    serialNumber,
+                                    status: 'confirmed', 
+                                    confirmationId: 'SMILE-' + Math.floor(Math.random() * 10000) 
+                                };
+                                result = newBooking;
+                                setBookingStatus(newBooking);
+                                setTranscription(`(Booking: Serial-${serialNumber} for ${name}...)`);
+                                
+                                // Save to Firestore
+                                addDoc(collection(db, 'bookings'), {
+                                    ...newBooking,
+                                    createdAt: serverTimestamp()
+                                });
+                            }
+                        } catch (e) {
+                            console.error("Error during booking:", e);
+                            result = { error: 'Internal system error during booking.' };
+                        }
                     }
                 }
 
@@ -483,6 +595,10 @@ const LiveAgent: React.FC = () => {
           
           <div className="grid grid-cols-2 gap-4">
              <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+               <span className="block text-xs font-semibold text-slate-400 uppercase">Serial Number</span>
+               <span className="block text-emerald-600 font-bold mt-1">Serial-{bookingStatus.serialNumber}</span>
+             </div>
+             <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
                <span className="block text-xs font-semibold text-slate-400 uppercase">Patient Name</span>
                <span className="block text-slate-800 font-medium mt-1">{bookingStatus.name}</span>
              </div>
@@ -502,17 +618,15 @@ const LiveAgent: React.FC = () => {
           
           <div className="mt-6 flex justify-between items-center text-sm">
              <span className="text-slate-500">Confirmation ID: <strong className="text-slate-800">{bookingStatus.confirmationId}</strong></span>
-             <a 
-               href={`https://wa.me/${bookingStatus.contactNumber?.replace(/\D/g, '') || ''}?text=${encodeURIComponent(`Hi ${bookingStatus.name}! Your appointment at SmileSync Dental is confirmed.\n\nDate: ${bookingStatus.date}\nTime: ${bookingStatus.time}\nConfirmation ID: ${bookingStatus.confirmationId}`)}`}
-               target="_blank"
-               rel="noopener noreferrer"
-               className="px-3 py-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors rounded-full font-medium flex items-center gap-1 cursor-pointer"
+             <button 
+               onClick={() => downloadPDF(bookingStatus)}
+               className="px-4 py-2 bg-teal-600 text-white hover:bg-teal-700 transition-colors rounded-xl font-medium flex items-center gap-2 shadow-sm"
              >
-               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.767 5.768 0 1.954.981 3.542 2.361 4.498l-1.047 3.826 3.905-1.025c1.401.385 2.94.595 4.548.595 3.182 0 5.768-2.586 5.768-5.768 0-3.182-2.586-5.768-5.768-5.768zm3.336 8.353c-.157.442-.816.839-1.161.874-.326.033-.746.06-2.146-.518-1.687-.698-2.766-2.42-2.85-2.531-.083-.112-.68-.905-.68-1.724 0-.82.428-1.222.58-1.391.139-.155.337-.202.482-.202.144 0 .288 0 .408.006.126.006.294-.047.458.347.165.397.568 1.386.618 1.486.05.099.082.215.016.347-.066.132-.102.215-.202.33-.099.116-.212.248-.3.334-.1.101-.205.213-.087.417.116.205.518.86 1.108 1.391.762.686 1.403.896 1.605 1.002.201.106.319.088.437-.047.118-.135.508-.592.646-.795.14-.202.277-.168.458-.101.181.067 1.144.538 1.341.637.197.099.328.148.377.231.05.082.05.474-.107.916z"/>
+               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                </svg>
-               Send via WhatsApp
-             </a>
+               PDF Format
+             </button>
           </div>
         </div>
       )}

@@ -84,7 +84,7 @@ export default function AdminDashboard() {
     const search = searchTerm.toLowerCase();
     return (
       booking.name?.toLowerCase().includes(search) ||
-      booking.whatsapp?.includes(search) ||
+      booking.contactNumber?.includes(search) ||
       booking.date?.includes(search) ||
       booking.confirmationId?.toLowerCase().includes(search)
     );
@@ -128,6 +128,7 @@ export default function AdminDashboard() {
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                   <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Serial</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Patient</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Contact</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Date & Time</th>
@@ -138,6 +139,9 @@ export default function AdminDashboard() {
                 <tbody className="bg-white divide-y divide-slate-200">
                   {filteredBookings.map((booking) => (
                     <tr key={booking.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-teal-600">
+                        Serial-{booking.serialNumber}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-8 w-8 bg-teal-100 rounded-full flex items-center justify-center">
@@ -151,7 +155,7 @@ export default function AdminDashboard() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center text-sm text-slate-500">
                           <Phone className="flex-shrink-0 mr-1.5 h-4 w-4 text-slate-400" />
-                          {booking.whatsapp}
+                          {booking.contactNumber}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
