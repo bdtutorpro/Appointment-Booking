@@ -3,10 +3,7 @@ import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { 
   Sparkles, 
   LayoutDashboard,
-  MapPin,
-  Clock,
-  ShieldCheck,
-  Award
+  Clock
 } from 'lucide-react';
 import LiveAgent from './components/LiveAgent';
 import AdminDashboard from './components/AdminDashboard';
@@ -14,25 +11,6 @@ import AdminDashboard from './components/AdminDashboard';
 function VoiceAssistantPage() {
   return (
     <div className="min-h-screen bg-[#0d0517] text-purple-100 flex flex-col justify-between selection:bg-amber-500 selection:text-purple-950 font-sans">
-      {/* Top Banner with Clinic Schedule */}
-      <div className="bg-[#1D0E30] text-amber-100 py-2.5 px-4 text-xs font-medium border-b border-amber-500/10">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-2">
-          <div className="flex items-center gap-4 flex-wrap justify-center">
-            <span className="flex items-center gap-1.5 text-amber-400">
-              <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-              145/1, Crescent Plaza, Green Road, Dhaka
-            </span>
-            <span className="flex items-center gap-1.5 text-amber-400">
-              <Clock className="w-3.5 h-3.5 flex-shrink-0" />
-              Doctor Schedule: 2:00 PM - 8:00 PM (Weekly Holiday: Wednesday)
-            </span>
-          </div>
-          <div className="font-semibold text-amber-400">
-            Call support: 096 3929 7137 , 013 1051 9250
-          </div>
-        </div>
-      </div>
-
       {/* Main Premium Header */}
       <header className="bg-[#130722]/90 backdrop-blur-md border-b border-purple-950/40 py-4 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
@@ -74,20 +52,6 @@ function VoiceAssistantPage() {
         {/* Embedded Live Agent Component */}
         <div className="w-full">
           <LiveAgent />
-        </div>
-        
-        {/* Support Highlights */}
-        <div className="grid grid-cols-2 gap-4 max-w-2xl w-full mt-10">
-          <div className="bg-[#18092a]/50 p-4 rounded-xl border border-purple-900/30 text-center space-y-1">
-            <Award className="w-4 h-4 text-amber-400 mx-auto" />
-            <span className="block text-white text-xs font-semibold">Instant Diagnostics</span>
-            <p className="text-[10px] text-purple-300 font-light">Price listings and details via AI</p>
-          </div>
-          <div className="bg-[#18092a]/50 p-4 rounded-xl border border-purple-900/30 text-center space-y-1">
-            <ShieldCheck className="w-4 h-4 text-amber-400 mx-auto" />
-            <span className="block text-white text-xs font-semibold">Priority Booking</span>
-            <p className="text-[10px] text-purple-300 font-light">Digital PDF confirmation download</p>
-          </div>
         </div>
 
         {/* Available Doctors & Schedule Visual Card */}
