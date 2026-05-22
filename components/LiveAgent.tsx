@@ -699,7 +699,7 @@ const LiveAgent: React.FC = () => {
                       : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-purple-950 hover:shadow-lg active:scale-95 border border-amber-400/50'
                     }`}
                 >
-                  {status === 'connecting' ? 'Connecting to Shoma...' : 'Talk to Shoma (AI Voice)'}
+                  {status === 'connecting' ? 'Connecting to Shoma...' : 'Start Talking'}
                 </button>
               ) : (
                 <button
@@ -735,9 +735,7 @@ const LiveAgent: React.FC = () => {
                </div>
              </div>
              <div className="flex-1 p-4 overflow-y-auto space-y-4">
-               {chatLog.length === 0 ? (
-                 <p className="text-center text-purple-300/40 text-sm italic mt-8">Conversation speech will appear here in real-time...</p>
-               ) : (
+               {chatLog.length === 0 ? null : (
                  chatLog.map((msg, i) => (
                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in duration-300`}>
                      <div className={`max-w-[85%] rounded-xl px-3.5 py-2 text-sm text-left ${
