@@ -1,8 +1,10 @@
 {
-  "name": "RR IT Live Appointment",
-  "description": "A real-time voice-enabled appointment booking assistant powered by Gemini 2.5 Live API.",
+  "name": "Sparkle Skin, Laser & Aesthetic Centre",
+  "description": "Premium 24/7 AI Voice Assistant and booking platform for Sparkle Skin, Laser & Aesthetic Centre.",
   "requestFramePermissions": [
     "microphone"
   ],
-  "majorCapabilities": []
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

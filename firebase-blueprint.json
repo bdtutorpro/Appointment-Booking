@@ -33,6 +33,47 @@
         }
       },
       "required": ["name", "contactNumber", "date", "time", "confirmationId", "status", "createdAt", "serialNumber"]
+    },
+    "lead": {
+      "title": "Lead",
+      "description": "A callback request or skincare inquiry lead",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "whatsapp": {
+          "type": "string"
+        },
+        "interested_service": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "preferred_call_time": {
+          "type": "string"
+        },
+        "lead_status": {
+          "type": "string",
+          "enum": ["New", "Contacted", "Interested", "Converted"]
+        },
+        "source": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Server timestamp or ISO string"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Server timestamp or ISO string"
+        }
+      },
+      "required": ["name", "phone", "interested_service", "lead_status"]
     }
   },
   "firestore": {
@@ -41,6 +82,12 @@
         "$ref": "#/entities/booking"
       },
       "description": "All bookings"
+    },
+    "leads": {
+      "schema": {
+        "$ref": "#/entities/lead"
+      },
+      "description": "All beauty leads and inquiries"
     }
   }
 }

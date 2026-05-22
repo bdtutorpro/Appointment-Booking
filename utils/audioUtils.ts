@@ -52,7 +52,21 @@ export async function decodeAudioData(
   sampleRate: number,
   numChannels: number,
 ): Promise<AudioBuffer> {
-  const dataInt16 = new Int16Array(data.buffer);
+  // Gracefully parse raw signed 16-bit little-endian PCM sample values.
+  // This is immune to byte length mismatches (e.g. odd lengths) and unaligned offsets.
+  const len = Math.floor(data.byteLength / 2);
+  const dataInt16 = new Int16Array(len);
+  for (let i = 0; i < len; i++) {
+    const low = data[i * 2];
+    const high = data[i * 2 + 1];
+    let val = low | (high << 8);
+    // Sign-extend 16-bit signed integer values
+    if (val & 0x8000) {
+      val |= ~0xffff;
+    }
+    dataInt16[i] = val;
+  }
+
   const frameCount = dataInt16.length / numChannels;
   const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
 

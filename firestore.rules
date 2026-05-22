@@ -8,9 +8,12 @@ service cloud.firestore {
 
     // Bookings collection
     match /bookings/{bookingId} {
-      allow read: if true; // Anyone can read for the admin dashboard demo (simplification, real product should use auth)
-      allow create: if true; // Voice agent creates bookings
-      allow update: if true; // For editing if needed
+      allow read, create, update, delete: if true;
+    }
+
+    // Leads collection
+    match /leads/{leadId} {
+      allow read, create, update, delete: if true;
     }
   }
 }

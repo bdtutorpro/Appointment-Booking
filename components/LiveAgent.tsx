@@ -11,6 +11,24 @@ import Visualizer from './Visualizer';
 import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { jsPDF } from 'jspdf';
+import { 
+  Phone, 
+  Calendar, 
+  Clock, 
+  User, 
+  Download, 
+  CheckCircle2, 
+  Volume2, 
+  Mic, 
+  Sparkles, 
+  AlertTriangle,
+  MapPin,
+  ClipboardCheck,
+  FileCheck2,
+  Activity,
+  Loader2,
+  CalendarCheck2
+} from 'lucide-react';
 
 // Tool Definition
 const checkAvailabilityTool: FunctionDeclaration = {
@@ -38,12 +56,51 @@ const bookAppointmentTool: FunctionDeclaration = {
       time: { type: Type.STRING, description: 'Time of appointment (HH:MM).' },
       name: { type: Type.STRING, description: 'Name of the patient.' },
       contactNumber: { type: Type.STRING, description: 'Contact number of the patient.' },
+      doctorName: { type: Type.STRING, description: 'Name of the doctor (e.g. Prof. Dr. Wahida Khan, Dr. Kamal, or general skin specialist if not specified).' },
+      treatment: { type: Type.STRING, description: 'Name of treatment or reason for appointment (e.g. Hydra Facial, CO2 Laser, Acne treatment, PRP, etc.).' },
     },
     required: ['date', 'time', 'name', 'contactNumber'],
   },
 };
 
 type ChatMessage = { role: 'user' | 'agent'; text: string };
+
+const getDoctorsForDate = (dateString: string) => {
+  const dateObj = new Date(dateString);
+  const day = dateObj.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  
+  switch (day) {
+    case 0: // Sunday
+      return [{ name: "Dr. Arifur Rahman", time: "3:00 PM - 8:00 PM" }];
+    case 1: // Monday
+      return [
+        { name: "Dr. Asma Sharmin", time: "3:00 PM - 8:00 PM" },
+        { name: "Dr. Ismat Ara Juthi", time: "3:00 PM - 8:00 PM" }
+      ];
+    case 2: // Tuesday
+      return [
+        { name: "Dr. Silveeya Chowdhury", time: "3:00 PM - 8:00 PM" },
+        { name: "Dr. Farzana Rahman Shathi", time: "2:00 PM - 8:00 PM" }
+      ];
+    case 3: // Wednesday
+      return []; // Holiday
+    case 4: // Thursday
+      return [
+        { name: "Dr. Silveeya Chowdhury", time: "Alternative Thursday, 3:00 PM - 8:00 PM" },
+        { name: "Dr. Farzana Rahman Shathi", time: "2:00 PM - 8:00 PM" },
+        { name: "Dr. Manna Salwa Bulbul", time: "3:00 PM - 8:00 PM" }
+      ];
+    case 5: // Friday
+      return [{ name: "Dr. Silveeya Chowdhury", time: "3:00 PM - 8:00 PM" }];
+    case 6: // Saturday
+      return [
+        { name: "Dr. Silveeya Chowdhury", time: "3:00 PM - 8:00 PM" },
+        { name: "Dr. Asma Sharmin", time: "3:00 PM - 8:00 PM" }
+      ];
+    default:
+      return [];
+  }
+};
 
 const LiveAgent: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -59,8 +116,8 @@ const LiveAgent: React.FC = () => {
     
     // Header
     doc.setFontSize(22);
-    doc.setTextColor(13, 148, 136); // Teal 600
-    doc.text('RR IT Live Appointment', 105, 20, { align: 'center' });
+    doc.setTextColor(107, 33, 168); // Regal Purple (purple-700)
+    doc.text('Sparkle Skin, Laser & Aesthetic Centre', 105, 20, { align: 'center' });
     
     doc.setFontSize(16);
     doc.setTextColor(30, 41, 59); // Slate 800
@@ -75,10 +132,10 @@ const LiveAgent: React.FC = () => {
     doc.setTextColor(100, 116, 139); // Slate 500
     
     let y = 60;
-    doc.text('Serial Number:', 20, y);
-    doc.setTextColor(13, 148, 136);
+    doc.text('Doctor Name:', 20, y);
+    doc.setTextColor(217, 119, 6); // Amber 600 (Gold)
     doc.setFont('helvetica', 'bold');
-    doc.text(`Serial-${booking.serialNumber}`, 70, y);
+    doc.text(`${booking.doctorName || 'Prof. Dr. Wahida Khan'}`, 70, y);
     
     y += 10;
     doc.setTextColor(100, 116, 139);
@@ -105,18 +162,25 @@ const LiveAgent: React.FC = () => {
     doc.setTextColor(30, 41, 59);
     doc.text(`${booking.time}`, 70, y);
     
+    y += 10;
+    doc.setTextColor(100, 116, 139);
+    doc.text('Appointment For:', 20, y);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`${booking.treatment || 'General Skin Consultation'}`, 70, y);
+    
     y += 20;
     doc.setFontSize(14);
     doc.setTextColor(30, 41, 59);
     doc.text('Confirmation ID:', 20, y);
-    doc.setTextColor(13, 148, 136);
+    doc.setTextColor(107, 33, 168);
     doc.text(`${booking.confirmationId}`, 70, y);
     
     // Footer
     doc.setFontSize(10);
     doc.setTextColor(148, 163, 184); // Slate 400
-    doc.text('Thank you for choosing RR IT Live Appointment.', 105, 280, { align: 'center' });
-    doc.text('One of our representative will contact with you soon.', 105, 285, { align: 'center' });
+    doc.text('Thank you for choosing Sparkle Skin, Laser & Aesthetic Centre.', 105, 275, { align: 'center' });
+    doc.setFontSize(8);
+    doc.text('Developed by RR IT - 0171976897', 105, 285, { align: 'center' });
     
     doc.save(`Appointment_${booking.confirmationId}.pdf`);
   };
@@ -126,7 +190,7 @@ const LiveAgent: React.FC = () => {
       downloadPDF(bookingStatus);
     }
   }, [bookingStatus]);
-  
+
   // References for Audio Contexts and Stream Management
   const inputAudioContextRef = useRef<AudioContext | null>(null);
   const outputAudioContextRef = useRef<AudioContext | null>(null);
@@ -135,7 +199,10 @@ const LiveAgent: React.FC = () => {
   const nextStartTimeRef = useRef<number>(0);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   const inputAnalyzerRef = useRef<AnalyserNode | null>(null);
-  const speechRecognitionRef = useRef<any>(null);
+
+  // In-order audio sample queue to ensure gapless, crash-free chronological voice playback
+  const audioQueueRef = useRef<Uint8Array[]>([]);
+  const isProcessingQueueRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -152,23 +219,71 @@ const LiveAgent: React.FC = () => {
       mediaStreamRef.current = null;
     }
     if (inputAudioContextRef.current) {
-      inputAudioContextRef.current.close();
+      inputAudioContextRef.current.close().catch(() => {});
       inputAudioContextRef.current = null;
     }
     if (outputAudioContextRef.current) {
-      outputAudioContextRef.current.close();
+      outputAudioContextRef.current.close().catch(() => {});
       outputAudioContextRef.current = null;
     }
-    sourcesRef.current.forEach(source => source.stop());
-    sourcesRef.current.clear();
-    if (speechRecognitionRef.current) {
+    sourcesRef.current.forEach(source => {
       try {
-        speechRecognitionRef.current.stop();
-      } catch(e) {}
-      speechRecognitionRef.current = null;
-    }
+        source.stop();
+      } catch (e) {}
+    });
+    sourcesRef.current.clear();
+    audioQueueRef.current = [];
+    isProcessingQueueRef.current = false;
     setAnalyzer(undefined);
   }, []);
+
+  const processAudioQueue = async () => {
+    if (isProcessingQueueRef.current) return;
+    isProcessingQueueRef.current = true;
+
+    while (audioQueueRef.current.length > 0) {
+      const data = audioQueueRef.current.shift();
+      if (!data) continue;
+
+      const outputCtx = outputAudioContextRef.current;
+      if (outputCtx) {
+        try {
+          if (outputCtx.state === 'suspended') {
+            await outputCtx.resume();
+          }
+
+          const audioBuffer = await decodeAudioData(
+            data,
+            outputCtx,
+            24000, 
+            1
+          );
+
+          // Standard Live API logic: schedule audio buffer tightly
+          nextStartTimeRef.current = Math.max(nextStartTimeRef.current, outputCtx.currentTime);
+
+          const source = outputCtx.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(outputCtx.destination);
+          
+          source.onended = () => {
+            sourcesRef.current.delete(source);
+            if (sourcesRef.current.size === 0 && audioQueueRef.current.length === 0) {
+              setStatus('connected');
+            }
+          };
+          
+          source.start(nextStartTimeRef.current);
+          nextStartTimeRef.current += audioBuffer.duration;
+          sourcesRef.current.add(source);
+        } catch (err) {
+          console.error("Error playing audio chunk from queue:", err);
+        }
+      }
+    }
+
+    isProcessingQueueRef.current = false;
+  };
 
   const connectToLiveAPI = async () => {
     setStatus('connecting');
@@ -181,6 +296,14 @@ const LiveAgent: React.FC = () => {
       
       inputAudioContextRef.current = inputCtx;
       outputAudioContextRef.current = outputCtx;
+
+      // Force resume the audio contexts to satisfy security requirements on modern browsers
+      if (inputCtx.state === 'suspended') {
+        await inputCtx.resume();
+      }
+      if (outputCtx.state === 'suspended') {
+        await outputCtx.resume();
+      }
 
       // 2. Setup Audio Input Stream
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -197,45 +320,74 @@ const LiveAgent: React.FC = () => {
       // 3. Initialize Gemini API
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY, httpOptions: { apiVersion: 'v1alpha' } });
       
-      // Setup Web Speech API for User transcription
-      const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = false;
-        recognition.onresult = (event: any) => {
-          const result = event.results[event.results.length - 1];
-          if (result.isFinal) {
-             const text = result[0].transcript;
-             setChatLog(prev => [...prev, { role: 'user', text }]);
-          }
-        };
-        recognition.onerror = (event: any) => {
-            console.warn("Speech recognition error:", event.error);
-        };
-        recognition.start();
-        speechRecognitionRef.current = recognition;
-      }
-      
       const config = {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
           voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
         },
-        systemInstruction: `You are a friendly and efficient multilingual receptionist for "SmileSync Dental". 
+        // Enable premium server-side transcription for maximum accuracy, bilingual support, and no mic resource conflicts
+        inputAudioTranscription: {},
+        outputAudioTranscription: {},
+        systemInstruction: `You are Shoma, a highly realistic, natural, professional, and friendly 24/7 AI Voice Assistant and beauty receptionist for "Sparkle Skin, Laser & Aesthetic Centre" based in Dhaka, Bangladesh.
+            Address: 145/1, Crescent Plaza, Green Road, Dhaka.
+            Website: sparkleskinbd.com.
+            Phones: 096 3929 7137, 013 1051 9250.
+            
             Today is ${new Date().toLocaleDateString()}.
-            Doctor's Schedule: Everyday 4:00 PM to 9:00 PM. 
-            EXCLUSION: Friday is CLOSED.
-            CAPACITY: Maximum 30 patients per day.
-            CRITICAL INSTRUCTION: Immediately upon starting the conversation, introduce yourself and ask first: "Which language do you prefer, Bengali or English?".
-            Wait for the user's response. If the user chooses Bengali, switch entirely to Bengali for the rest of the conversation. If they choose English, continue in English.
-            Help users book appointments. 
-            When they ask for availability, call the 'checkAvailability' tool.
-            BEFORE calling 'bookAppointment', you MUST ask the user for their name AND their contact number.
-            When you have all details (date, time, name, contactNumber), call the 'bookAppointment' tool.
-            The serial number is assigned automatically based on booking order.
-            After booking is confirmed, you MUST say "আমাদের একজন প্রতিনিধি শীঘ্রই আপনার সাথে যোগাযোগ করবেন" (one of our representative will contact you soon in Bengali) and mention their Serial Number.
-            Keep responses concise and conversational.`,
+            Doctors' Weekly Schedule (Highly Critical to check before responding or booking):
+            - Friday: Dr. Silveeya Chowdhury (3:00 PM - 8:00 PM)
+            - Saturday: Dr. Silveeya Chowdhury (3:00 PM - 8:00 PM) & Dr. Asma Sharmin (3:00 PM - 8:00 PM)
+            - Sunday: Dr. Arifur Rahman (3:00 PM - 8:00 PM)
+            - Monday: Dr. Asma Sharmin (3:00 PM - 8:00 PM) & Dr. Ismat Ara Juthi (3:00 PM - 8:00 PM)
+            - Tuesday: Dr. Silveeya Chowdhury (3:00 PM - 8:00 PM) & Dr. Farzana Rahman Shathi (2:00 PM - 8:00 PM)
+            - Wednesday: Weekly Holiday (No doctors available, Closed)
+            - Thursday: Dr. Silveeya Chowdhury (Alternative Thursday, 3:00 PM - 8:00 PM), Dr. Farzana Rahman Shathi (2:00 PM - 8:00 PM), & Dr. Manna Salwa Bulbul (3:00 PM - 8:00 PM)
+            
+            Capacity: Maximum 30 patients per day. No appointments on Wednesdays.
+            
+            Your personality:
+            - Polite, soft-spoken, confident, natural, and caring.
+            - Sound like a trained premium front-desk executive. Speak with a natural Bangladesh-friendly accent. Never sound robotic or formal.
+            - Speak in Bengali, English, or mixed Bangla-English (Code-switching/Spanglish) based on how the user communicates.
+            
+            Opening Greetings (Start with one of these depending on the language of the conversation):
+            - Bengali: “আসসালামু আলাইকুম, Sparkle Skin, Laser & Aesthetic Centre-এ আপনাকে স্বাগতম। আমি আপনার ২৪/৭ AI Assistant, Shoma। আপনি কি appointment book করতে চান, নাকি আমাদের skin, laser বা aesthetic treatment সম্পর্কে জানতে চান?”
+            - English: “Welcome to Sparkle Skin, Laser & Aesthetic Centre. I am Shoma, your 24/7 AI assistant. Would you like to book an appointment or know about our skin, laser and aesthetic treatments?”
+            - Bangla-English Mixed: “Welcome to Sparkle Skin. আপনি কি appointment নিতে চান, নাকি skin, laser বা aesthetic treatment সম্পর্কে জানতে চান?”
+            
+            Services Knowledge Base:
+            - Diagnosis & Biopsy: Skin Analysis (800 - 1,200 BDT), Skin Biopsy with Histopathology (8,500 BDT), Skin Biopsy with DIF (12,000 BDT), Excisional Biopsy (15,000 - 20,000 BDT), Woods Lamp Examination (1,500 BDT).
+            - Laser Treatments: CO2 Laser (8,000 BDT), FRX Laser (8,000 BDT), Diode Laser (8,000 - 10,000 BDT).
+            - Injectables & Regenerative: PRP Scalp (6,000 - 8,050 BDT), PRP Face (8,000 BDT), Microneedling PRP Face & Scalp (10,000 BDT), Glutathione IV Drip (15,000 BDT), Exosome (12,000 - 15,000 BDT), PN / Polynucleotide (7,500 BDT), PDRN (12,000 BDT).
+            - Facials & Peels: Chemical Peel (4,000 BDT), Hydra Facial (Basic: 4,000 BDT, Premium: 6,000 BDT, Advanced: 8,000 BDT), BB Glow (12,000 BDT).
+            - Contouring & Aesthetics: Lip Brightening Combo (8,000 - 10,000 BDT), P-Shot / O-Shot (8,000 BDT), Lipolytic Injection - Face (5,000 BDT), Lipolytic Injection - Abdomen (30,000 BDT), Monothread (1,000 BDT per thread).
+            - Intralesional Therapy: I/L (4,000 BDT), I/L - Wart + Bleomycin (5,000 BDT), I/L - Keloid (5,000 BDT), I/L - LSC / HLP (3,500 - 5,500 BDT).
+            
+            Price Disclaimer:
+            Always say: "এটি একটি estimated price. আপনার skin condition, doctor consultation এবং procedure plan অনুযায়ী final cost confirm করা হবে।"
+            
+            Appointment Booking Flow:
+            1. Ask doctor or treatment need: "আপনি কোন treatment বা skin concern নিয়ে appointment নিতে চান?"
+            2. Collect patient information (Do NOT ask everything in one breath, ask one question at a time):
+            - Full Name
+            - Contact Number (Save as contactNumber tool argument)
+            - Preferred Date & Time
+            3. When you have all details, call the 'bookAppointment' tool. Be sure to supply 'doctorName' and 'treatment' arguments too. If the patient highlights a specific day of the week, inform them of the doctors available on that day. If they have not explicitly selected a doctor, automatically assign a suitable one based on the schedule for their preferred day, or offer them the choices. Assign the appropriate treatment or concern to the 'treatment' parameter.
+            4. After booking is successfully confirmed, you must say: "আমাদের একজন প্রতিনিধি শীঘ্রই আপনার সাথে যোগাযোগ করবেন। আপনার Secure Booking ID হলো [confirmationId from tool result]." Note: Do NOT mention any "Serial Number" or "Serial", as serial numbers are not used. Instead, confirm the Doctor's name and the Treatment name they booked for.
+            
+            Medical Safety Rules (CRITICAL):
+            - Never diagnose disease, prescribe medicine, or guarantee results.
+            - Never say any treatment is 100% safe for everyone.
+            - Always recommend doctor consultation for medical skin problems.
+            - If customer mentions emergency/severe symptoms (severe swelling, infections, burn after laser, allergic reactions, bleeding, severe pain), say: "আপনার symptoms শুনে মনে হচ্ছে সরাসরি doctor consultation জরুরি। দয়া করে দ্রুত clinic-এ যোগাযোগ করুন অথবা নিকটস্থ hospital/doctor-এর পরামর্শ নিন। আমি চাইলে আপনার contact number note করে team-কে urgent follow-up এর জন্য পাঠাতে পারি।"
+            
+            FAQs:
+            - Location: "আমাদের ঠিকানা: Sparkle Skin, Laser & Aesthetic Centre, 145/1, Crescent Plaza, Green Road, Dhaka."
+            - Phones: "096 3929 7137, 013 1051 9250"
+            - Hydra Facial explanation: Hydra Facial is popular for deep cleansing, hydration, skin glowing. Standard rates are Basic 4,000 Tk, Premium 6,000 Tk, and Advanced 8,000 Tk.
+            - PRP Scalp: Hair fall reduction treatment using platelet-rich plasma from your own blood.
+            - Chemical Peel: Pigmentation, acne mark clearing.
+            - CO2 Laser: Scar, mole, wart, skin tag removal.`,
         tools: [{ functionDeclarations: [checkAvailabilityTool, bookAppointmentTool] }]
       };
 
@@ -252,7 +404,9 @@ const LiveAgent: React.FC = () => {
             if (sessionPromiseRef.current) {
               sessionPromiseRef.current.then(session => {
                 // Kickstart model so it speaks first
-                session.sendRealtimeInput({ text: "Hello! Please introduce yourself and ask me which language I prefer." });
+                session.sendRealtimeInput({ text: "Hello! Please greet me immediately in Bengali as Shoma, using the exact opening greeting: 'আসসালামু আলাইকুম, Sparkle Skin, Laser & Aesthetic Centre-এ আপনাকে স্বাগতম। আমি আপনার ২৪/৭ AI Assistant, Shoma। আপনি কি appointment book করতে চান, নাকি আমাদের skin, laser বা aesthetic treatment সম্পর্কে জানতে চান?'" });
+              }).catch(err => {
+                console.error("Error sending initial kickstart:", err);
               });
             }
 
@@ -266,17 +420,34 @@ const LiveAgent: React.FC = () => {
                if (sessionPromiseRef.current) {
                  sessionPromiseRef.current.then(session => {
                    session.sendRealtimeInput({ audio: pcmBlob });
+                 }).catch(err => {
+                   console.error("Error sending input audio:", err);
                  });
                }
             };
             
             // Connect the audio processing graph
-            // Source (Microphone) -> Analyzer -> ScriptProcessor -> Destination (Muted)
-            // Note: We already connected source -> analyzer above.
             analyzerNode.connect(scriptProcessor);
             scriptProcessor.connect(inputCtx.destination);
           },
           onmessage: async (message: LiveServerMessage) => {
+            // Handle native user voice transcription
+            if (message.serverContent?.userTurn?.parts) {
+              const textParts = message.serverContent.userTurn.parts.filter(p => p.text).map(p => p.text).join('');
+              if (textParts) {
+                setChatLog(prev => {
+                  const lastMsg = prev[prev.length - 1];
+                  if (lastMsg && lastMsg.role === 'user') {
+                    const newLog = [...prev];
+                    newLog[newLog.length - 1] = { ...lastMsg, text: lastMsg.text + " " + textParts };
+                    return newLog;
+                  }
+                  return [...prev, { role: 'user', text: textParts }];
+                });
+              }
+            }
+
+            // Handle native model voice transcription
             if (message.serverContent?.modelTurn?.parts) {
               const textParts = message.serverContent.modelTurn.parts.filter(p => p.text).map(p => p.text).join('');
               if (textParts) {
@@ -292,46 +463,30 @@ const LiveAgent: React.FC = () => {
               }
             }
 
-            // Handle Audio Output
-            const base64Audio = message.serverContent?.modelTurn?.parts?.find(p => p.inlineData)?.inlineData?.data;
-            if (base64Audio) {
+            // Extract and queue output audio data chunks
+            const audioParts = message.serverContent?.modelTurn?.parts?.filter(p => p.inlineData && p.inlineData.data) || [];
+            if (audioParts.length > 0) {
               setStatus('speaking');
-              
-              const outputCtx = outputAudioContextRef.current;
-              if (outputCtx) {
-                // Ensure nextStartTime is valid
-                nextStartTimeRef.current = Math.max(nextStartTimeRef.current, outputCtx.currentTime);
-
-                const audioBuffer = await decodeAudioData(
-                  decode(base64Audio),
-                  outputCtx,
-                  24000, 
-                  1
-                );
-
-                const source = outputCtx.createBufferSource();
-                source.buffer = audioBuffer;
-                source.connect(outputCtx.destination);
-                
-                source.onended = () => {
-                    sourcesRef.current.delete(source);
-                    if (sourcesRef.current.size === 0) {
-                        setStatus('connected'); // Revert to connected if no audio playing
-                    }
-                };
-                
-                source.start(nextStartTimeRef.current);
-                nextStartTimeRef.current += audioBuffer.duration;
-                sourcesRef.current.add(source);
+              for (const part of audioParts) {
+                if (part.inlineData?.data) {
+                  audioQueueRef.current.push(decode(part.inlineData.data));
+                }
               }
+              processAudioQueue();
             }
 
-            // Handle Interruptions
+            // Handle Interruptions from either user speaking or system commands
             if (message.serverContent?.interrupted) {
               console.log('Interrupted by user');
-              sourcesRef.current.forEach(source => source.stop());
+              audioQueueRef.current = [];
+              sourcesRef.current.forEach(source => {
+                try {
+                  source.stop();
+                } catch (e) {}
+              });
               sourcesRef.current.clear();
               nextStartTimeRef.current = 0;
+              setStatus('connected');
             }
 
             // Handle Tool Calls
@@ -343,10 +498,10 @@ const LiveAgent: React.FC = () => {
                 if (fc.name === 'checkAvailability') {
                     const date = fc.args['date'] as string;
                     const dateObj = new Date(date);
-                    const isFriday = dateObj.getDay() === 5; // Friday is 5 in JS (Sun=0, Sat=6)
+                    const isWednesday = dateObj.getDay() === 3; // Wednesday is 3 in JS (Sun=0, Mon=1, Tue=2, Wed=3)
                     
-                    if (isFriday) {
-                        result = { available: false, message: 'Friday is closed.' };
+                    if (isWednesday) {
+                        result = { available: false, message: 'Wednesday is our weekly holiday.' };
                     } else {
                         try {
                             const q = query(collection(db, 'bookings'), where('date', '==', date));
@@ -355,11 +510,19 @@ const LiveAgent: React.FC = () => {
                             if (count >= 30) {
                                 result = { available: false, message: 'Appointments for this day are full (30/30).' };
                             } else {
-                                result = { available: true, message: `Available. Current bookings: ${count}/30. Serial will be ${count + 1}.`, schedule: '4:00 PM to 9:00 PM' };
+                                const dayDocList = getDoctorsForDate(date);
+                                const docListStr = dayDocList.map(d => `${d.name} (${d.time})`).join(', ');
+                                result = { 
+                                    available: true, 
+                                    message: `Available. Current bookings: ${count}/30 on this day.`, 
+                                    availableDoctors: docListStr || 'Consultant Specialist'
+                                };
                             }
                         } catch (e) {
                             console.error("Error checking availability:", e);
-                            result = { available: true, message: 'Available from 4:00 PM to 9:00 PM.' };
+                            const dayDocList = getDoctorsForDate(date);
+                            const docListStr = dayDocList.map(d => `${d.name} (${d.time})`).join(', ');
+                            result = { available: true, message: 'Available.', availableDoctors: docListStr };
                         }
                     }
                     setTranscription(`(Checking availability for ${date}...)`);
@@ -368,12 +531,12 @@ const LiveAgent: React.FC = () => {
                     const time = fc.args['time'] as string;
                     const name = fc.args['name'] as string;
                     const contactNumber = fc.args['contactNumber'] as string;
-
-                    const dateObj = new Date(date);
-                    const isFriday = dateObj.getDay() === 5;
                     
-                    if (isFriday) {
-                        result = { error: 'Friday is closed. Please choose another date.' };
+                    const dateObj = new Date(date);
+                    const isWednesday = dateObj.getDay() === 3;
+                    
+                    if (isWednesday) {
+                        result = { error: 'Wednesday is our Weekly Holiday. Please choose another date.' };
                     } else {
                         try {
                             const q = query(collection(db, 'bookings'), where('date', '==', date));
@@ -383,19 +546,28 @@ const LiveAgent: React.FC = () => {
                             if (count >= 30) {
                                 result = { error: 'Maximum capacity (30) reached for this day.' };
                             } else {
-                                const serialNumber = count + 1;
+                                const dayDocList = getDoctorsForDate(date);
+                                let doctorName = fc.args['doctorName'] as string;
+                                if (!doctorName && dayDocList.length > 0) {
+                                    doctorName = dayDocList[0].name;
+                                } else if (!doctorName) {
+                                    doctorName = "Prof. Dr. Wahida Khan (Skin Specialist)";
+                                }
+                                const treatment = (fc.args['treatment'] as string) || "Skin Consultation";
+                                
                                 const newBooking = { 
                                     date, 
                                     time, 
                                     name, 
                                     contactNumber, 
-                                    serialNumber,
+                                    doctorName,
+                                    treatment,
                                     status: 'confirmed', 
                                     confirmationId: 'SMILE-' + Math.floor(Math.random() * 10000) 
                                 };
                                 result = newBooking;
                                 setBookingStatus(newBooking);
-                                setTranscription(`(Booking: Serial-${serialNumber} for ${name}...)`);
+                                setTranscription(`(Booking for ${name}: ${treatment} with ${doctorName}...)`);
                                 
                                 // Save to Firestore
                                 addDoc(collection(db, 'bookings'), {
@@ -420,6 +592,8 @@ const LiveAgent: React.FC = () => {
                         response: { result },
                       }
                     });
+                  }).catch(err => {
+                    console.error("Error sending tool response:", err);
                   });
                 }
               }
@@ -453,15 +627,8 @@ const LiveAgent: React.FC = () => {
 
   const handleDisconnect = async () => {
     if (sessionPromiseRef.current) {
-       // There isn't a direct "close" method exposed easily on the promise wrapper in the snippets,
-       // but typically we stop sending audio and the session might timeout or we can try to close if the API supports it.
-       // Based on the example, we just stop the local audio and let the connection drop or rely on the object if available.
-       // However, the example code uses `session.close()` in the "Rules" section.
        try {
            const session = await sessionPromiseRef.current;
-           // session.close() is mentioned in the rules section of the prompt.
-           // Assuming the type definition allows it or it's dynamic.
-           // If strict types block it, we might need a workaround, but `any` cast is safe for now given the doc.
            (session as any).close(); 
        } catch (e) {
            console.warn("Error closing session explicitly:", e);
@@ -481,10 +648,10 @@ const LiveAgent: React.FC = () => {
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
-        <div className="p-6 bg-gradient-to-r from-teal-500 to-emerald-500">
-          <h2 className="text-2xl font-bold text-white mb-2">SmileSync Agent</h2>
-          <p className="text-teal-50 text-sm">Voice-activated appointment booking</p>
+      <div className="bg-purple-950/60 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden border border-amber-500/30">
+        <div className="p-6 bg-gradient-to-r from-purple-900 via-purple-950 to-indigo-950 border-b border-amber-500/20">
+          <h2 className="text-2xl font-bold text-amber-400 font-serif mb-1">Shoma — AI Voice Assistant</h2>
+          <p className="text-purple-200 text-xs font-medium">Sparkle Skin, Laser & Aesthetic Centre</p>
         </div>
 
         <div className="p-6 space-y-6">
@@ -493,30 +660,30 @@ const LiveAgent: React.FC = () => {
               <div className="flex items-center space-x-2">
                   <span className={`relative flex h-3 w-3`}>
                     {status !== 'idle' && (
-                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${status === 'speaking' ? 'bg-emerald-400' : 'bg-blue-400'}`}></span>
+                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${status === 'speaking' ? 'bg-amber-400' : 'bg-purple-400'}`}></span>
                     )}
                     <span className={`relative inline-flex rounded-full h-3 w-3 ${
-                      status === 'idle' ? 'bg-slate-300' :
+                      status === 'idle' ? 'bg-purple-800' :
                       status === 'connecting' ? 'bg-amber-400' :
-                      status === 'connected' ? 'bg-blue-500' :
-                      'bg-emerald-500'
+                      status === 'connected' ? 'bg-purple-400' :
+                      'bg-amber-500'
                     }`}></span>
                   </span>
-                  <span className="text-sm font-medium text-slate-600 capitalize">
-                      {status === 'speaking' ? 'Agent Speaking' : status}
+                  <span className="text-sm font-semibold text-purple-200 capitalize">
+                      {status === 'speaking' ? 'Shoma is Speaking' : status === 'connected' ? 'Agent Live (Muted)' : status}
                   </span>
               </div>
-              {transcription && <span className="text-xs text-slate-400 italic truncate max-w-[150px]">{transcription}</span>}
+              {transcription && <span className="text-xs text-amber-300 font-mono italic truncate max-w-[200px]">{transcription}</span>}
           </div>
 
           <div className="flex gap-4 items-center">
             {/* Visualizer Area */}
-            <div className="relative w-32 h-20 bg-slate-50 flex-shrink-0 rounded-xl overflow-hidden border border-slate-100 flex items-center justify-center">
+            <div className="relative w-32 h-20 bg-purple-900/40 flex-shrink-0 rounded-xl overflow-hidden border border-purple-800/40 flex items-center justify-center">
                  <Visualizer isActive={isConnected} analyzer={analyzer} />
                  {!isConnected && !error && (
-                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                         <p className="text-slate-400 text-xs font-light text-center px-2">Click Start</p>
-                     </div>
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <p className="text-purple-300/60 text-xs font-light text-center px-2">Ready</p>
+                      </div>
                  )}
             </div>
             
@@ -526,20 +693,20 @@ const LiveAgent: React.FC = () => {
                 <button
                   onClick={connectToLiveAPI}
                   disabled={status === 'connecting'}
-                  className={`flex-1 py-3 px-4 rounded-xl font-semibold text-white shadow-md transition-all
+                  className={`flex-1 py-3 px-4 rounded-xl font-bold shadow-md transition-all
                     ${status === 'connecting' 
-                      ? 'bg-slate-400 cursor-not-allowed' 
-                      : 'bg-teal-600 hover:bg-teal-700 hover:shadow-lg active:scale-95'
+                      ? 'bg-purple-900/40 text-purple-300 cursor-not-allowed border border-purple-800/30' 
+                      : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-purple-950 hover:shadow-lg active:scale-95 border border-amber-400/50'
                     }`}
                 >
-                  {status === 'connecting' ? 'Connecting...' : 'Start Conversation'}
+                  {status === 'connecting' ? 'Connecting to Shoma...' : 'Talk to Shoma (AI Voice)'}
                 </button>
               ) : (
                 <button
                   onClick={handleDisconnect}
-                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-white bg-red-500 hover:bg-red-600 shadow-md hover:shadow-lg active:scale-95 transition-all"
+                  className="flex-1 py-3 px-4 rounded-xl font-bold text-white bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-700 hover:to-red-800 shadow-md hover:shadow-lg active:scale-95 transition-all border border-rose-500/30"
                 >
-                  End Call
+                  End Session
                 </button>
               )}
             </div>
@@ -547,26 +714,36 @@ const LiveAgent: React.FC = () => {
 
           {/* Error Message */}
           {error && (
-              <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
+              <div className="p-3 bg-red-950/40 text-red-300 text-sm rounded-lg border border-red-500/30">
                   {error}
               </div>
           )}
 
           {/* Chat Transcript Area */}
-          <div className="mt-6 border border-slate-200 rounded-xl bg-slate-50 overflow-hidden flex flex-col h-64">
-             <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-               Live Transcript
+          <div className="mt-6 border border-purple-800/30 rounded-xl bg-purple-950/40 overflow-hidden flex flex-col h-64">
+             <div className="flex items-center justify-between px-4 py-2.5 bg-purple-900/40 border-b border-purple-800/20 text-xs font-semibold text-amber-400/80 uppercase tracking-wider">
+               <div className="flex items-center gap-2">
+                 <Activity className="h-3.5 w-3.5 text-amber-400 animate-pulse" />
+                 <span>Voice Call Transcript</span>
+               </div>
+               <div className="flex items-center gap-1.5 text-[10px] text-purple-300">
+                 <span className="relative flex h-2 w-2">
+                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-450 opacity-75"></span>
+                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                 </span>
+                 <span>Live Sync</span>
+               </div>
              </div>
              <div className="flex-1 p-4 overflow-y-auto space-y-4">
                {chatLog.length === 0 ? (
-                 <p className="text-center text-slate-400 text-sm italic mt-8">Conversation will appear here...</p>
+                 <p className="text-center text-purple-300/40 text-sm italic mt-8">Conversation speech will appear here in real-time...</p>
                ) : (
                  chatLog.map((msg, i) => (
-                   <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                     <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${
+                   <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in duration-300`}>
+                     <div className={`max-w-[85%] rounded-xl px-3.5 py-2 text-sm text-left ${
                        msg.role === 'user' 
-                         ? 'bg-emerald-600 text-white rounded-br-none' 
-                         : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none shadow-sm'
+                         ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-purple-950 font-medium rounded-br-none shadow-md' 
+                         : 'bg-purple-900/60 border border-purple-800/40 text-purple-100 rounded-bl-none shadow-sm'
                      }`}>
                         <div className="whitespace-pre-wrap">{msg.text}</div>
                      </div>
@@ -581,51 +758,86 @@ const LiveAgent: React.FC = () => {
       
       {/* Booking Form Visualizer */}
       {bookingStatus && (
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-emerald-200 p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="relative overflow-hidden bg-gradient-to-br from-purple-950 via-slate-950 to-indigo-950 rounded-2xl border border-amber-500/45 p-6 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center">
+            <div className="w-10 h-10 bg-amber-500/10 text-amber-400 rounded-full flex items-center justify-center border border-amber-500/20">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-900">Appointment Confirmed</h3>
+              <h3 className="text-xl font-bold text-amber-400 font-serif">Appointment Secured!</h3>
+              <p className="text-xs text-purple-200">Secure Clinic Digital Pass — PDF Auto-Downloaded</p>
             </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-             <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-               <span className="block text-xs font-semibold text-slate-400 uppercase">Serial Number</span>
-               <span className="block text-emerald-600 font-bold mt-1">Serial-{bookingStatus.serialNumber}</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+             <div className="p-3 bg-purple-900/20 rounded-xl border border-purple-850/40 flex items-center gap-3">
+                <div className="p-2 bg-amber-500/10 text-amber-400 rounded-lg flex-shrink-0">
+                   <User className="h-5 w-5 text-amber-400" />
+                </div>
+                <div className="text-left min-w-0">
+                  <span className="block text-[10px] font-semibold text-purple-300 uppercase">Name of Doctor</span>
+                  <span className="block text-amber-300 font-bold mt-0.5 text-xs truncate" title={bookingStatus.doctorName}>{bookingStatus.doctorName || 'Prof. Dr. Wahida Khan'}</span>
+                </div>
              </div>
-             <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-               <span className="block text-xs font-semibold text-slate-400 uppercase">Patient Name</span>
-               <span className="block text-slate-800 font-medium mt-1">{bookingStatus.name}</span>
+             <div className="p-3 bg-purple-900/20 rounded-xl border border-purple-850/40 flex items-center gap-3">
+                <div className="p-2 bg-purple-500/10 text-purple-300 rounded-lg flex-shrink-0">
+                   <User className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <span className="block text-[10px] font-semibold text-purple-300 uppercase">Patient Name</span>
+                  <span className="block text-purple-100 font-semibold mt-0.5 truncate max-w-[120px]">{bookingStatus.name}</span>
+                </div>
              </div>
-             <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-               <span className="block text-xs font-semibold text-slate-400 uppercase">Contact Number</span>
-               <span className="block text-slate-800 font-medium mt-1">{bookingStatus.contactNumber}</span>
+             <div className="p-3 bg-purple-900/20 rounded-xl border border-purple-850/40 flex items-center gap-3">
+                <div className="p-2 bg-purple-500/10 text-purple-300 rounded-lg flex-shrink-0">
+                   <Phone className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <span className="block text-[10px] font-semibold text-purple-300 uppercase">Contact Phone</span>
+                  <span className="block text-purple-100 font-semibold mt-0.5">{bookingStatus.contactNumber}</span>
+                </div>
              </div>
-             <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-               <span className="block text-xs font-semibold text-slate-400 uppercase">Date</span>
-               <span className="block text-slate-800 font-medium mt-1">{bookingStatus.date}</span>
+             <div className="p-3 bg-purple-900/20 rounded-xl border border-purple-850/40 flex items-center gap-3">
+                <div className="p-2 bg-purple-500/10 text-purple-300 rounded-lg flex-shrink-0">
+                   <Calendar className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <span className="block text-[10px] font-semibold text-purple-300 uppercase">Scheduled Date</span>
+                  <span className="block text-purple-100 font-semibold mt-0.5">{bookingStatus.date}</span>
+                </div>
              </div>
-             <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-               <span className="block text-xs font-semibold text-slate-400 uppercase">Time</span>
-               <span className="block text-slate-800 font-medium mt-1">{bookingStatus.time}</span>
+             <div className="p-3 bg-purple-900/20 rounded-xl border border-purple-850/40 flex items-center gap-3">
+                <div className="p-2 bg-purple-500/10 text-purple-300 rounded-lg flex-shrink-0">
+                   <Clock className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <span className="block text-[10px] font-semibold text-purple-300 uppercase">Scheduled Time</span>
+                  <span className="block text-purple-100 font-semibold mt-0.5">{bookingStatus.time}</span>
+                </div>
+             </div>
+             <div className="p-3 bg-purple-900/20 rounded-xl border border-purple-850/40 flex items-center gap-3">
+                <div className="p-2 bg-purple-500/10 text-purple-300 rounded-lg flex-shrink-0">
+                   <Sparkles className="h-5 w-5 text-amber-400" />
+                </div>
+                <div className="text-left min-w-0">
+                  <span className="block text-[10px] font-semibold text-purple-300 uppercase">Appointment For</span>
+                  <span className="block text-purple-100 font-semibold mt-0.5 text-xs truncate" title={bookingStatus.treatment}>{bookingStatus.treatment || 'General Skin Consultation'}</span>
+                </div>
              </div>
           </div>
           
           <div className="mt-6 flex justify-between items-center text-sm">
-             <span className="text-slate-500">Confirmation ID: <strong className="text-slate-800">{bookingStatus.confirmationId}</strong></span>
+             <span className="text-purple-300 font-medium">Secured Booking ID: <strong className="text-amber-400">{bookingStatus.confirmationId}</strong></span>
              <button 
                onClick={() => downloadPDF(bookingStatus)}
-               className="px-4 py-2 bg-teal-600 text-white hover:bg-teal-700 transition-colors rounded-xl font-medium flex items-center gap-2 shadow-sm"
+               className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-purple-950 hover:shadow-lg transition-all rounded-xl font-bold flex items-center gap-2 border border-amber-400/40"
              >
                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                </svg>
-               PDF Format
+               Download PDF Ticket
              </button>
           </div>
         </div>

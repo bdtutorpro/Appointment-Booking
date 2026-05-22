@@ -32,19 +32,23 @@ const Visualizer: React.FC<VisualizerProps> = ({ isActive, analyzer }) => {
     }
 
     const draw = () => {
+      ctx.clearRect(0, 0, rect.width, rect.height);
+
       if (!isActive) {
-        ctx.clearRect(0, 0, rect.width, rect.height);
-        
-        // Draw idle state (pulsing circle)
-        const time = Date.now() / 1000;
-        const centerX = rect.width / 2;
-        const centerY = rect.height / 2;
-        const radius = 30 + Math.sin(time * 2) * 2;
-        
+        // Draw idle state: smooth golden gradient wave line that pulses gently
+        const time = Date.now() / 800;
         ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-        ctx.fillStyle = 'rgba(203, 213, 225, 0.3)'; // Slate-300
-        ctx.fill();
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)'; // Golden amber
+        ctx.lineWidth = 3;
+        
+        ctx.moveTo(0, rect.height / 2);
+        for (let x = 0; x < rect.width; x++) {
+          const y = rect.height / 2 + Math.sin(x * 0.05 + time) * 8 * Math.sin(time / 2);
+          ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        animationRef.current = requestAnimationFrame(draw);
         return;
       }
 
@@ -53,34 +57,40 @@ const Visualizer: React.FC<VisualizerProps> = ({ isActive, analyzer }) => {
       if (analyzer) {
         analyzer.getByteFrequencyData(dataArray);
       } else {
-        return; // Wait for analyzer
+        return;
       }
 
-      ctx.clearRect(0, 0, rect.width, rect.height);
-      const barWidth = (rect.width / bufferLength) * 2.5;
-      let barHeight;
-      let x = 0;
+      // Draw landscape spectrum bars (16 bars looks beautiful on w-32 size)
+      const barCount = 16;
+      const barWidth = rect.width / barCount;
+      const spacing = 3;
 
-      const centerX = rect.width / 2;
-      const centerY = rect.height / 2;
+      for (let i = 0; i < barCount; i++) {
+        // Match frequency bins to spectrum bar
+        const binIndex = Math.floor(i * (bufferLength / barCount));
+        const val = dataArray[binIndex] || 0;
+        const norm = val / 255;
+        // Calculate height
+        const barHeight = norm * (rect.height - 12) + 4; // minimum 4px height for beautiful feel
+        const x = i * barWidth + spacing / 2;
+        const y = rect.height - barHeight;
 
-      // Draw a circular visualizer
-      for (let i = 0; i < bufferLength; i++) {
-        barHeight = dataArray[i] / 2;
-        
-        ctx.save();
-        ctx.translate(centerX, centerY);
-        ctx.rotate(i * (Math.PI * 2) / 60); // Simplified rotation for visual effect
-        
-        const gradient = ctx.createLinearGradient(0, 0, 0, barHeight + 20);
-        gradient.addColorStop(0, '#0ea5e9'); // Sky 500
-        gradient.addColorStop(1, '#6366f1'); // Indigo 500
+        const gradient = ctx.createLinearGradient(0, rect.height, 0, y);
+        gradient.addColorStop(0, '#d97706'); // Deep Amber / Gold
+        gradient.addColorStop(0.5, '#ec4899'); // Pink
+        gradient.addColorStop(1, '#a855f7'); // Purple
 
         ctx.fillStyle = gradient;
-        ctx.fillRect(-2, 10, 4, barHeight + 10);
-        ctx.restore();
 
-        x += barWidth + 1;
+        // Draw a path with rounded top corners for each bar
+        const width = barWidth - spacing;
+        ctx.beginPath();
+        if (ctx.roundRect) {
+          ctx.roundRect(x, y, width, barHeight, [4, 4, 0, 0]);
+        } else {
+          ctx.rect(x, y, width, barHeight);
+        }
+        ctx.fill();
       }
     };
 
@@ -96,7 +106,7 @@ const Visualizer: React.FC<VisualizerProps> = ({ isActive, analyzer }) => {
   return (
     <canvas 
       ref={canvasRef} 
-      className="w-full h-64 rounded-xl bg-slate-50 border border-slate-100 shadow-inner"
+      className="w-full h-full rounded-xl bg-purple-950/20"
     />
   );
 };
