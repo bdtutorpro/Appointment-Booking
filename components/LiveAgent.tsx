@@ -650,7 +650,7 @@ const LiveAgent: React.FC = () => {
     <div className="w-full max-w-2xl mx-auto space-y-6">
       <div className="bg-purple-950/60 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden border border-amber-500/30">
         <div className="p-6 bg-gradient-to-r from-purple-900 via-purple-950 to-indigo-950 border-b border-amber-500/20">
-          <h2 className="text-2xl font-bold text-amber-400 font-serif mb-1">Shoma — AI Voice Assistant</h2>
+          <h2 className="text-2xl font-bold text-amber-400 font-serif mb-1">Shoma — 24/7 Assistant</h2>
           <p className="text-purple-200 text-xs font-medium">Sparkle Skin, Laser & Aesthetic Centre</p>
         </div>
 

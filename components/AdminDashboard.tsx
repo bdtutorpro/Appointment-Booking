@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { jsPDF } from 'jspdf';
 import { 
   Search, 
   Calendar, 
@@ -19,7 +20,8 @@ import {
   TrendingUp, 
   Scissors, 
   ChevronRight,
-  ShieldCheck 
+  ShieldCheck,
+  Download
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -51,6 +53,259 @@ export default function AdminDashboard() {
       });
     } catch (err) {
       console.error('Error updating booking status:', err);
+    }
+  };
+
+  // CSV down helper for bookings
+  const handleDownloadCSV = (dataList: any[], filenamePrefix: string) => {
+    try {
+      if (!dataList || dataList.length === 0) {
+        alert("No bookings available under this selection!");
+        return;
+      }
+      
+      const headers = [
+        "Confirmation ID",
+        "Name of Doctor",
+        "Patient Name",
+        "Phone Number",
+        "WhatsApp",
+        "Treatment Care",
+        "Specific Concern Details",
+        "Appointment Date",
+        "Appointment Time",
+        "Age",
+        "Gender",
+        "Status",
+        "Created At"
+      ];
+      
+      const rows = dataList.map(item => {
+        const fields = [
+          item.confirmationId || '',
+          item.doctorName || 'Prof. Dr. Wahida Khan',
+          item.name || '',
+          item.contactNumber || '',
+          item.whatsapp || '',
+          item.service || item.treatment || 'Skin Consultation',
+          item.concern || '',
+          item.date || '',
+          item.time || '',
+          item.age || '',
+          item.gender || 'Not specified',
+          item.status || 'Pending',
+          item.createdAt ? (item.createdAt.seconds ? new Date(item.createdAt.seconds * 1000).toLocaleString() : String(item.createdAt)) : ''
+        ];
+        
+        return fields.map(field => {
+          const stringified = String(field).replace(/"/g, '""');
+          return `"${stringified}"`;
+        }).join(",");
+      });
+      
+      const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `${filenamePrefix}_${new Date().toISOString().slice(0, 10)}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("Error creating bookings CSV export:", err);
+    }
+  };
+
+  // Download booking data separately as custom polished PDF slip
+  const handleDownloadSingleBooking = (booking: any) => {
+    try {
+      const doc = new jsPDF();
+      
+      doc.setFontSize(22);
+      doc.setTextColor(107, 33, 168); // Regal Purple
+      doc.text('Sparkle Skin, Laser & Aesthetic Centre', 105, 20, { align: 'center' });
+      
+      doc.setFontSize(16);
+      doc.setTextColor(30, 41, 59);
+      doc.text('Official Appointment Confirmation Slip', 105, 32, { align: 'center' });
+      
+      doc.setDrawColor(226, 232, 240);
+      doc.line(20, 42, 190, 42);
+      
+      doc.setFontSize(12);
+      doc.setTextColor(100, 116, 139);
+      
+      let y = 56;
+      doc.text('Doctor Name (চিকিৎসক):', 20, y);
+      doc.setTextColor(217, 119, 6); // Amber Gold
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${booking.doctorName || 'Prof. Dr. Wahida Khan'}`, 75, y);
+      
+      y += 11;
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Patient Name (রোগীর নাম):', 20, y);
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${booking.name}`, 75, y);
+      
+      y += 11;
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Contact Phone (মোবাইল নম্বর):', 20, y);
+      doc.setTextColor(30, 41, 59);
+      doc.text(`${booking.contactNumber}`, 75, y);
+
+      if (booking.whatsapp) {
+        y += 11;
+        doc.setTextColor(100, 116, 139);
+        doc.text('WhatsApp Number:', 20, y);
+        doc.setTextColor(16, 185, 129); // Emerald
+        doc.text(`${booking.whatsapp}`, 75, y);
+      }
+      
+      y += 11;
+      doc.setTextColor(100, 116, 139);
+      doc.text('Appointment For (চিকিৎসা):', 20, y);
+      doc.setTextColor(30, 41, 59);
+      doc.text(`${booking.service || booking.treatment || 'Skin Consultation'}`, 75, y);
+
+      y += 11;
+      doc.setTextColor(100, 116, 139);
+      doc.text('Patient Age / Sex:', 20, y);
+      doc.setTextColor(30, 41, 59);
+      doc.text(`${booking.age || 'N/A'} Years / ${booking.gender || 'Not specified'}`, 75, y);
+      
+      y += 11;
+      doc.setTextColor(100, 116, 139);
+      doc.text('Scheduled Date:', 20, y);
+      doc.setTextColor(30, 41, 59);
+      doc.text(`${booking.date}`, 75, y);
+      
+      y += 11;
+      doc.setTextColor(100, 116, 139);
+      doc.text('Scheduled Time:', 20, y);
+      doc.setTextColor(30, 41, 59);
+      doc.text(`${booking.time}`, 75, y);
+
+      y += 11;
+      doc.setTextColor(100, 116, 139);
+      doc.text('Status (অবস্থা):', 20, y);
+      const bookingStatusText = booking.status ? booking.status.toUpperCase() : 'CONFIRMED';
+      if (bookingStatusText === 'CONFIRM' || bookingStatusText === 'CONFIRMED') {
+        doc.setTextColor(16, 185, 129);
+        doc.setFont('helvetica', 'bold');
+        doc.text('CONFIRMED (অনুমোদিত)', 75, y);
+      } else {
+        doc.setTextColor(245, 158, 11);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${bookingStatusText}`, 75, y);
+      }
+      
+      doc.setFont('helvetica', 'normal');
+      y += 20;
+      doc.setFontSize(14);
+      doc.setTextColor(30, 41, 59);
+      doc.text('Secure Confirmation ID:', 20, y);
+      doc.setTextColor(107, 33, 168);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${booking.confirmationId}`, 80, y);
+      
+      doc.setDrawColor(241, 245, 249);
+      doc.rect(15, 48, 180, y - 48 + 10);
+
+      y += 22;
+      doc.setFillColor(250, 245, 255);
+      doc.rect(15, y, 180, 25, 'F');
+      doc.setFontSize(10);
+      doc.setTextColor(107, 33, 168);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Patient Instructions:', 20, y + 8);
+      doc.setTextColor(75, 85, 99);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Please arrive 10 minutes prior to your scheduled time. Show this ticket slip at reception.', 20, y + 16);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(148, 163, 184);
+      doc.text('Thank you for choosing Sparkle Skin, Laser & Aesthetic Centre.', 105, 275, { align: 'center' });
+      doc.setFontSize(8);
+      doc.text('Developed by RR IT - 0171976897', 105, 285, { align: 'center' });
+      
+      doc.save(`Appointment_${booking.confirmationId || 'Receipt'}.pdf`);
+    } catch (e) {
+      console.error("Error creating receipt PDF, falling back to TXT download:", e);
+      // Fast fallback to txt file download
+      const textVal = `
+=============================================
+Sparkle Skin, Laser & Aesthetic Centre
+=============================================
+Confirmation ID: ${booking.confirmationId}
+Patient: ${booking.name}
+Doctor: ${booking.doctorName || 'Prof. Dr. Wahida Khan'}
+Treatment: ${booking.service || booking.treatment || 'Consultation'}
+Date: ${booking.date} at ${booking.time}
+Status: ${booking.status || 'Confirmed'}
+=============================================`;
+      const blob = new Blob([textVal], { type: 'text/plain;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Appointment_${booking.confirmationId}.txt`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  // CSV download helper for Callback Leads
+  const handleDownloadLeadsCSV = () => {
+    try {
+      if (!leads || leads.length === 0) {
+        alert("No prospective inquiries or callback leads available to download!");
+        return;
+      }
+      
+      const headers = [
+        "Patient Name",
+        "Phone Number",
+        "Skincare Treatment Interest",
+        "Callback Preferred Slot",
+        "Specific Concern Message",
+        "Current Lead Status",
+        "Registration Date"
+      ];
+      
+      const rows = leads.map(l => {
+        const fields = [
+          l.name || '',
+          l.phone || '',
+          l.interested_service || 'Complimentary Skin Consult',
+          l.preferred_call_time || '',
+          l.message || 'General skincare consult requested.',
+          l.lead_status || 'New',
+          l.createdAt ? (l.createdAt.seconds ? new Date(l.createdAt.seconds * 1000).toLocaleString() : String(l.createdAt)) : 'Instant'
+        ];
+        return fields.map(field => {
+          const stringified = String(field).replace(/"/g, '""');
+          return `"${stringified}"`;
+        }).join(",");
+      });
+      
+      const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Callback_Inquiries_Database_${new Date().toISOString().slice(0, 10)}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("Error creating leads CSV export:", err);
     }
   };
 
@@ -395,6 +650,35 @@ export default function AdminDashboard() {
                 </div>
 
               </div>
+
+              <div className="flex flex-wrap gap-4 pt-4 border-t border-slate-100 items-center justify-between">
+                <div className="text-xs text-slate-500 font-medium select-none">
+                  Found <span className="text-purple-950 font-bold">{filteredBookings.length}</span> matching appointments out of <span className="font-bold">{bookings.length}</span> total.
+                </div>
+                <div className="flex flex-wrap gap-2.5">
+                  <button
+                    onClick={() => handleDownloadCSV(filteredBookings, "Filtered_Schedules")}
+                    disabled={filteredBookings.length === 0}
+                    type="button"
+                    className="px-4 py-2 border border-purple-200 hover:border-purple-300 bg-purple-50 hover:bg-purple-100 text-purple-950 font-bold rounded-lg text-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Export the filtered list of bookings as a CSV file"
+                  >
+                    <Download className="w-3.5 h-3.5 text-purple-800" />
+                    Download Filtered List (CSV)
+                  </button>
+                  <button
+                    onClick={() => handleDownloadCSV(bookings, "All_Appointments_Database")}
+                    disabled={bookings.length === 0}
+                    type="button"
+                    className="px-4 py-2 bg-purple-950 hover:bg-[#2A1542] hover:text-amber-300 text-amber-400 font-serif font-black rounded-lg text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border border-amber-500/20"
+                    title="Export the entire master booking database"
+                  >
+                    <Download className="w-3.5 h-3.5 text-amber-450 animate-pulse" />
+                    All Download (Full CSV)
+                  </button>
+                </div>
+              </div>
+
             </div>
 
             <div className="bg-white shadow-sm border border-purple-50 rounded-2xl overflow-hidden">
@@ -468,7 +752,14 @@ export default function AdminDashboard() {
                                 <option value="Pending" className="bg-white text-amber-800 font-bold">Pending</option>
                               </select>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <td className="px-6 py-4 whitespace-nowrap text-center space-x-2">
+                              <button
+                                onClick={() => handleDownloadSingleBooking(b)}
+                                className="p-1.5 bg-purple-55 border border-purple-200 hover:bg-purple-100 text-purple-800 rounded-lg transition-colors inline-flex items-center justify-center cursor-pointer"
+                                title="Download separate receipt slip (PDF)"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                              </button>
                               <button 
                                 onClick={() => handleDeleteBooking(b.id)}
                                 className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors inline-flex items-center justify-center cursor-pointer"
@@ -491,8 +782,8 @@ export default function AdminDashboard() {
         {/* Active Panel Tab 2: Callback Leads & Inquiries */}
         {activeTab === 'leads' && (
           <div className="space-y-4">
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-              <div className="relative">
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col md:flex-row items-center gap-4 justify-between">
+              <div className="relative flex-1 w-full">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Search className="h-5 w-5 text-slate-400" />
                 </div>
@@ -504,6 +795,15 @@ export default function AdminDashboard() {
                   onChange={(e) => setLeadSearch(e.target.value)}
                 />
               </div>
+              <button
+                onClick={handleDownloadLeadsCSV}
+                disabled={leads.length === 0}
+                type="button"
+                className="px-4 py-2.5 bg-purple-950 hover:bg-[#2A1542] hover:text-amber-300 text-amber-400 rounded-lg text-xs font-serif font-black shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border border-amber-500/20 whitespace-nowrap self-stretch md:self-auto justify-center"
+              >
+                <Download className="w-3.5 h-3.5 animate-pulse" />
+                Download Leads CSV
+              </button>
             </div>
 
             <div className="bg-white shadow-sm border border-purple-50 rounded-2xl overflow-hidden">
