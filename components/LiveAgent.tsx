@@ -374,6 +374,7 @@ const LiveAgent: React.FC = () => {
             - Preferred Date & Time
             3. When you have all details, call the 'bookAppointment' tool. Be sure to supply 'doctorName' and 'treatment' arguments too. If the patient highlights a specific day of the week, inform them of the doctors available on that day. If they have not explicitly selected a doctor, automatically assign a suitable one based on the schedule for their preferred day, or offer them the choices. Assign the appropriate treatment or concern to the 'treatment' parameter.
             4. After booking is successfully confirmed, you must say: "আমাদের একজন প্রতিনিধি শীঘ্রই আপনার সাথে যোগাযোগ করবেন। আপনার Secure Booking ID হলো [confirmationId from tool result]." Note: Do NOT mention any "Serial Number" or "Serial", as serial numbers are not used. Instead, confirm the Doctor's name and the Treatment name they booked for.
+            CRITICAL PRICE RULE: After the booking is confirmed, do NOT say or mention any service price or cost of the treatment. Under no circumstances should you state the price automatically after booking. You should ONLY say the price of the treatment/service if the patient explicitly asks you about the price.
             
             Medical Safety Rules (CRITICAL):
             - Never diagnose disease, prescribe medicine, or guarantee results.
