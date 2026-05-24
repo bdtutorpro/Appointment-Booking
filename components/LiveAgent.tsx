@@ -388,7 +388,10 @@ const LiveAgent: React.FC = () => {
             - Hydra Facial explanation: Hydra Facial is popular for deep cleansing, hydration, skin glowing. Standard rates are Basic 4,000 Tk, Premium 6,000 Tk, and Advanced 8,000 Tk.
             - PRP Scalp: Hair fall reduction treatment using platelet-rich plasma from your own blood.
             - Chemical Peel: Pigmentation, acne mark clearing.
-            - CO2 Laser: Scar, mole, wart, skin tag removal.`,
+            - CO2 Laser: Scar, mole, wart, skin tag removal.
+            - Medicine Availability: If any client asks "আপনাদের এখানে কি প্রয়োজনীয় ওষুধ পাওয়া যায়" or any question about medicines being available or sold on-site, the question-answering must always be:
+              "প্রশ্ন: আপনাদের এখানে কি প্রয়োজনীয় ওষুধ পাওয়া যায়। 
+              উত্তর: জ্বী আমাদের এখানে প্রয়োজনীয় ডার্মাটোলজিক্যাল সকল ওষুধ পাওয়া যায়।"`,
         tools: [{ functionDeclarations: [checkAvailabilityTool, bookAppointmentTool] }]
       };
 
